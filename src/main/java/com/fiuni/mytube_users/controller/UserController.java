@@ -29,7 +29,7 @@ public class UserController {
     private IUserService userService;
     @Autowired
     private ISubscriptionService subscriptionService;
-    //endpoint para obtener todos los usuarios
+
     @GetMapping("/all")
     public ResponseEntity<List<UserDTO>> findAllUsers(Pageable pageable) {
         try {
@@ -42,6 +42,26 @@ public class UserController {
             return new ResponseEntity<>(null, HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
+
+    // Endpoint para obtener un usuario por ID
+    @GetMapping("/{id}")
+    public ResponseEntity<UserDTO> getUserById(@PathVariable Integer id) {
+        log.info("Searching user id: {}", id);
+        UserDTO userDTO = null;
+        try {
+            userDTO = userService.getById(id);
+            log.info("User found: {}", userDTO);
+            if (userDTO == null) {
+                log.warn("User with id {} not found", id);
+                throw new ResourceNotFoundException("User with id " + id + " not found");
+            }
+        } catch (Exception e) {
+            log.error("Error while retrieving user with id {}: {}", id, e.getMessage(), e);
+            throw e;
+        }
+        return new ResponseEntity<>(userDTO, HttpStatus.OK);
+    }
+
     //endpoint para guardar usuario
     @PostMapping("/save")
     public ResponseEntity<UserDTO> saveUser(@RequestBody UserDTOCreate userDTO) {
@@ -56,24 +76,6 @@ public class UserController {
         }
     }
 
-    // Endpoint para obtener un usuario por ID
-    @GetMapping("/{id}")
-    public ResponseEntity<UserDTO> getUserById(@PathVariable Integer id) {
-        log.info("Searching user id: {}", id);
-        UserDTO userDTO = null;
-        try {
-            userDTO = userService.getById(id);
-            log.info("User found: {}", userDTO);    
-            if (userDTO == null) {
-                log.warn("User with id {} not found", id);
-                throw new ResourceNotFoundException("User with id " + id + " not found");
-            }
-        } catch (Exception e) {
-            log.error("Error while retrieving user with id {}: {}", id, e.getMessage(), e);
-            throw e;
-        }
-        return new ResponseEntity<>(userDTO, HttpStatus.OK);
-    }
     //enpoint para actualizar usuario
     @PutMapping("/{id}")
     public ResponseEntity<UserDTO> updateUser(@PathVariable Integer id, @RequestBody UserDTO userDTO) {
@@ -104,22 +106,7 @@ public class UserController {
             return new ResponseEntity<>("Error updating password", HttpStatus.BAD_REQUEST);
         }
     }
-    //endpoint para eliminar usuario
-    @DeleteMapping("/{id}")
-    public ResponseEntity<String> deleteUser(@PathVariable Integer id) {
-        try {
-            log.info("Deleting user with ID: {}", id);
-            userService.deleteUser(id);
-            log.info("Successfully deleted user with ID: {}", id);
-            return new ResponseEntity<>("User successfully deleted (soft delete)", HttpStatus.OK);
-        } catch (ResponseStatusException e) {
-            log.error("User not found with ID: {}", id, e);
-            return new ResponseEntity<>(e.getReason(), HttpStatus.NOT_FOUND);
-        } catch (Exception e) {
-            log.error("Error deleting user with ID: {}", id, e);
-            return new ResponseEntity<>("Error deleting user", HttpStatus.INTERNAL_SERVER_ERROR);
-        }
-    }
+
     //enpoint para obtener suscripciones de un usuario
     @GetMapping("/{id}/subscriptions")
     public ResponseEntity<List<SubscriptionDTO>> getUserSubscriptions(@PathVariable Integer id) {
@@ -137,4 +124,22 @@ public class UserController {
             return new ResponseEntity<>(null, HttpStatus.NOT_FOUND);
         }
     }
+
+    //endpoint para eliminar usuario
+    @DeleteMapping("/{id}")
+    public ResponseEntity<String> deleteUser(@PathVariable Integer id) {
+        try {
+            log.info("Deleting user with ID: {}", id);
+            userService.deleteUser(id);
+            log.info("Successfully deleted user with ID: {}", id);
+            return new ResponseEntity<>("User successfully deleted (soft delete)", HttpStatus.OK);
+        } catch (ResponseStatusException e) {
+            log.error("User not found with ID: {}", id, e);
+            return new ResponseEntity<>(e.getReason(), HttpStatus.NOT_FOUND);
+        } catch (Exception e) {
+            log.error("Error deleting user with ID: {}", id, e);
+            return new ResponseEntity<>("Error deleting user", HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
 }

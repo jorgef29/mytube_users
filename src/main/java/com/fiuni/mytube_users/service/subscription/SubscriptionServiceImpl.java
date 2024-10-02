@@ -7,6 +7,8 @@ import com.fiuni.mytube.dto.subscription.SubscriptionDTO;
 import com.fiuni.mytube.dto.subscription.SubscriptionResult;
 import com.fiuni.mytube_users.dao.ISubscriptionDao;
 import com.fiuni.mytube_users.dao.IUserDao;
+import com.fiuni.mytube_users.exception.BadRequestException;
+import com.fiuni.mytube_users.exception.ResourceNotFoundException;
 import com.fiuni.mytube_users.service.baseService.BaseServiceImpl;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -19,6 +21,7 @@ import org.springframework.data.redis.cache.RedisCacheManager;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
+import com.fiuni.mytube_users.exception.ResourceNotFoundException;
 
 import java.util.Date;
 import java.util.List;
@@ -70,23 +73,25 @@ public class SubscriptionServiceImpl extends BaseServiceImpl<SubscriptionDTO, Su
     @Override
     @CachePut(value = "my_tube_subscriptions",key = "'subscription_'+ #result.get_id()")
     public SubscriptionDTO save(SubscriptionDTO dto) {
-        // Convertir el DTO a dominio
-        SubscriptionDomain domain = convertDtoToDomain(dto);
+        try{
+            SubscriptionDomain domain = convertDtoToDomain(dto);
 
-        // Guardar la suscripción en la base de datos
-        SubscriptionDomain savedDomain = subscriptionDao.save(domain);
-        log.info("subscription guardado en cache: {}", savedDomain);
-        // Convertir el dominio guardado de nuevo a DTO y devolverlo
-        return convertDomainToDto(savedDomain);
+            // Guardar la suscripción en la base de datos
+            SubscriptionDomain savedDomain = subscriptionDao.save(domain);
+            log.info("subscription guardado en cache: {}", savedDomain);
+            // Convertir el dominio guardado de nuevo a DTO y devolverlo
+            return convertDomainToDto(savedDomain);
+        } catch (Exception e) {
+            throw new BadRequestException("Bad request to save subscription");
+        }
     }
 
     @Override
     @Cacheable(value = "my_tube_subscription",key = "'subsctiption'+#id")
     public SubscriptionDTO getById(Integer id) {
         SubscriptionDomain domain = subscriptionDao.findById(id)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Suscripción no encontrada"));
+                .orElseThrow(() -> new ResourceNotFoundException("Subscription con id: "+ id +" no encontrado"));
 
-        // Convertir el dominio a DTO y devolverlo
         log.info("subscription guardado en cache: {}", domain);
         return convertDomainToDto(domain);
     }
@@ -131,7 +136,7 @@ public class SubscriptionServiceImpl extends BaseServiceImpl<SubscriptionDTO, Su
     public void deleteSubscription(Integer id) {
         // Verificar si la suscripción existe
         SubscriptionDomain subscription = subscriptionDao.findById(id)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Suscripción no encontrada"));
+                .orElseThrow(() -> new ResourceNotFoundException("Subscription con id: "+ id +" no encontrado"));
 
         // Eliminar la suscripción
         subscriptionDao.deleteById(id);

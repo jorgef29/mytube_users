@@ -4,6 +4,7 @@ import com.fiuni.mytube.dto.user.UserDTO;
 import com.fiuni.mytube.domain.user.UserDomain;
 import com.fiuni.mytube.dto.user.UserResult;
 import com.fiuni.mytube.dto.video.VideoDTO;
+import com.fiuni.mytube_users.dao.IRoleDao;
 import com.fiuni.mytube_users.dao.IUserDao;
 import com.fiuni.mytube_users.dto.UserDTOCreate;
 import com.fiuni.mytube_users.exception.ResourceNotFoundException;
@@ -21,7 +22,7 @@ import org.springframework.stereotype.Service;
 
 import java.util.Date;
 import java.util.Optional;
-import com.fiuni.mytube.domain.user.UserType;
+import com.fiuni.mytube.domain.user.RoleDomain;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
@@ -37,6 +38,8 @@ public class UserServiceImpl extends BaseServiceImpl<UserDTO, UserDomain, UserRe
     private IUserDao userDao;
     @Autowired
     private RedisCacheManager redisCacheManager;
+    @Autowired
+    private IRoleDao roleDao;
 
     @Override
     @Transactional
@@ -44,9 +47,6 @@ public class UserServiceImpl extends BaseServiceImpl<UserDTO, UserDomain, UserRe
     public UserDTO save(UserDTO dto) {
         UserDomain userDomain = convertDtoToDomain(dto);
 
-        if (userDomain.getPassword() == null) {
-            userDomain.setPassword("admin");
-        }
 
         // Guardar en la base de datos usando el repositorio
         userDomain = userDao.save(userDomain);
@@ -72,7 +72,7 @@ public class UserServiceImpl extends BaseServiceImpl<UserDTO, UserDomain, UserRe
         return convertDomainToDto(userDomain);
     }
 
-    @Override
+    @Override //VER DONDE ESTA LA CABECERA DE ESTE METODO
     public UserResult getAll() {
         return null;
     }
@@ -91,11 +91,13 @@ public class UserServiceImpl extends BaseServiceImpl<UserDTO, UserDomain, UserRe
         result.setUsers(userList);
         return result;
     }
+    //TIENE QUE ESTAR EN BASEIMP | En teoria debe funcionar igual porque la implementacion esta en baseimpl
+    /*
     public List<UserDTO> convertDomainListToDtoList(List<UserDomain> domains) {
         return domains.stream()
                 .map(this::convertDomainToDto)
                 .collect(Collectors.toList());
-    }
+    }*/
 
     @Override
     protected UserDTO convertDomainToDto(UserDomain domain) {
@@ -106,7 +108,7 @@ public class UserServiceImpl extends BaseServiceImpl<UserDTO, UserDomain, UserRe
         dto.setRegistrationDate(domain.getRegistrationDate());
         dto.setAvatarUrl(domain.getAvatarUrl());
         dto.setBio(domain.getBio());
-        dto.setUserType(String.valueOf(domain.getUserType()));
+        dto.setRoleName(String.valueOf(domain.getRole().getName()));
         return dto;
     }
 
@@ -119,19 +121,22 @@ public class UserServiceImpl extends BaseServiceImpl<UserDTO, UserDomain, UserRe
         domain.setRegistrationDate(dto.getRegistrationDate());
         domain.setAvatarUrl(dto.getAvatarUrl());
         domain.setBio(dto.getBio());
-        domain.setUserType(UserType.valueOf(dto.getUserType()));
+        RoleDomain roleDomain = roleDao.findByName(dto.getRoleName()).orElse(null);
+        domain.setRole(roleDomain);
         domain.setDeleted(false);
         return domain;
     }
 
 
-    @Override
+    @Override // cacheable no se puede porque pone en cache antes de la ejecucion
+    @CachePut(value = "mytube_users", key = "'user_'+ #result._id")
     public UserDTO createUser (UserDTOCreate dto) {
         UserDomain userDomain = new UserDomain();
         userDomain.setUsername(dto.getUsername());
         userDomain.setEmail(dto.getEmail());
         userDomain.setPassword(dto.getPassword());
-        userDomain.setUserType(UserType.REGULAR);
+        //por defecto role regular
+        userDomain.setRole((roleDao.findByName("regular").orElse(null)));
         userDomain.setDeleted(false);
         userDomain.setRegistrationDate(new Date());
 
@@ -172,7 +177,7 @@ public class UserServiceImpl extends BaseServiceImpl<UserDTO, UserDomain, UserRe
         userDomain.setEmail(dto.getEmail());
         userDomain.setAvatarUrl(dto.getAvatarUrl());
         userDomain.setBio(dto.getBio());
-        userDomain.setUserType(UserType.valueOf(dto.getUserType()));
+        userDomain.setRole(roleDao.findByName(dto.getRoleName()).orElse(null));
         userDomain.setRegistrationDate(dto.getRegistrationDate());
 
         // Guardar los cambios en la base de datos
