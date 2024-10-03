@@ -23,6 +23,7 @@ import org.springframework.stereotype.Service;
 import java.util.Date;
 import java.util.Optional;
 import com.fiuni.mytube.domain.user.RoleDomain;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
@@ -46,8 +47,6 @@ public class UserServiceImpl extends BaseServiceImpl<UserDTO, UserDomain, UserRe
     @CachePut(value="my_tube_users", key="'user_'+#result.get_id()")
     public UserDTO save(UserDTO dto) {
         UserDomain userDomain = convertDtoToDomain(dto);
-
-
         // Guardar en la base de datos usando el repositorio
         userDomain = userDao.save(userDomain);
         log.info("usuario creado: " + userDomain);
@@ -62,7 +61,7 @@ public class UserServiceImpl extends BaseServiceImpl<UserDTO, UserDomain, UserRe
 
 
     @Override
-    @Transactional(readOnly = true)
+    @Transactional(readOnly = true, propagation = Propagation.SUPPORTS)
     @Cacheable(value = "my_tube_users",key = "'user_'+#id",unless = "#result == null" ) //unless para no poner objetos nulos en cache
     public UserDTO getById(Integer id) {
         UserDomain userDomain = userDao.findById(id)
@@ -78,7 +77,7 @@ public class UserServiceImpl extends BaseServiceImpl<UserDTO, UserDomain, UserRe
     }
 
     @Override
-    @Transactional(readOnly = true)
+    @Transactional(readOnly = true, propagation = Propagation.NOT_SUPPORTED) //not supported
     public UserResult getAll(Pageable pageable) {
         // Obtener todos los usuarios no eliminados con paginación
         Page<UserDomain> page = userDao.findAllByDeletedFalse(pageable);
@@ -91,13 +90,6 @@ public class UserServiceImpl extends BaseServiceImpl<UserDTO, UserDomain, UserRe
         result.setUsers(userList);
         return result;
     }
-    //TIENE QUE ESTAR EN BASEIMP | En teoria debe funcionar igual porque la implementacion esta en baseimpl
-    /*
-    public List<UserDTO> convertDomainListToDtoList(List<UserDomain> domains) {
-        return domains.stream()
-                .map(this::convertDomainToDto)
-                .collect(Collectors.toList());
-    }*/
 
     @Override
     protected UserDTO convertDomainToDto(UserDomain domain) {
@@ -130,6 +122,7 @@ public class UserServiceImpl extends BaseServiceImpl<UserDTO, UserDomain, UserRe
 
     @Override // cacheable no se puede porque pone en cache antes de la ejecucion
     @CachePut(value = "mytube_users", key = "'user_'+ #result._id")
+    @Transactional
     public UserDTO createUser (UserDTOCreate dto) {
         UserDomain userDomain = new UserDomain();
         userDomain.setUsername(dto.getUsername());
@@ -145,6 +138,7 @@ public class UserServiceImpl extends BaseServiceImpl<UserDTO, UserDomain, UserRe
     }
 
     @Override
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void changePassword(Integer id, UserDTOCreate dto){
         UserDomain userDomain = userDao.findByIdAndDeletedFalse(id).orElse(null);
         userDomain.setPassword(dto.getPassword());
