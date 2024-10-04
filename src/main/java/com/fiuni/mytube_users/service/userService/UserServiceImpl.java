@@ -122,18 +122,21 @@ public class UserServiceImpl extends BaseServiceImpl<UserDTO, UserDomain, UserRe
 
     @Override // cacheable no se puede porque pone en cache antes de la ejecucion
     @CachePut(value = "mytube_users", key = "'user_'+ #result._id")
-    @Transactional
+    @Transactional(rollbackFor = Exception.class) //rollback para todas las excepciones
     public UserDTO createUser (UserDTOCreate dto) {
         UserDomain userDomain = new UserDomain();
+
         userDomain.setUsername(dto.getUsername());
         userDomain.setEmail(dto.getEmail());
         userDomain.setPassword(dto.getPassword());
-        //por defecto role regular
-        userDomain.setRole((roleDao.findByName("regular").orElse(null)));
+        //datos por defectos | NN
+        userDomain.setBio("");
+        userDomain.setRole(roleDao.findByName("new").orElse(null));
         userDomain.setDeleted(false);
-        userDomain.setRegistrationDate(new Date());
-
+        //guardar
         UserDomain result = userDao.save(userDomain);
+        //asignar demas atributos por defecto
+        assignDefaultAttribute(result);
         return convertDomainToDto(result);
     }
 
@@ -153,13 +156,14 @@ public class UserServiceImpl extends BaseServiceImpl<UserDTO, UserDomain, UserRe
         if (userDomain != null) {
             userDomain.setDeleted(true);
             userDao.save(userDomain);
+            setAttributeDelete(userDomain);
         } else {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Usuario no encontrado con el ID: " + id);
         }
     }
 
     @Override
-    @Transactional
+    @Transactional(rollbackFor = Exception.class)
     @CachePut(value = "my_tube_users", key = "'user_' + #id")
     public UserDTO updateUser(Integer id, UserDTO dto) {
         // Buscar el usuario existente en la base de datos
@@ -175,10 +179,50 @@ public class UserServiceImpl extends BaseServiceImpl<UserDTO, UserDomain, UserRe
         userDomain.setRegistrationDate(dto.getRegistrationDate());
 
         // Guardar los cambios en la base de datos
+        log.warn("Transacción activa en updateUser, guardando cambios...");
         UserDomain updatedDomain = userDao.save(userDomain);
+
+        try {
+            setAttributeUpdate(updatedDomain);
+        } catch (Exception e) {
+            log.error("Error en setAttributeUpdate, cambios en avatar no aplicados, pero cambios en bio guardados", e);
+        }
 
         // Convertir el dominio actualizado a DTO y devolverlo
         return convertDomainToDto(updatedDomain);
+    }
+
+    //LLAMADAS INDIRECTAS
+    @Transactional(propagation = Propagation.REQUIRED)
+    public void assignDefaultAttribute(UserDomain userDomain) {
+        userDomain.setRegistrationDate(new Date());
+        userDomain.setAvatarUrl("url-generica");
+        userDomain.setBio("nuevo usuario");
+        userDomain.setRole(roleDao.findByName("regular").orElse(null));
+        if(userDomain.getUsername().equals("errorTest")){
+            log.error("parametro: "+userDomain);
+            throw new RuntimeException("error simulado para el rollback");
+        }
+        userDao.save(userDomain);
+    }
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void setAttributeUpdate(UserDomain userDomain) {
+        log.warn("setAttributeUpdate ejecutado SIN transacción");
+        userDomain.setAvatarUrl("url-actualizada-por-setAttribute");
+        if (userDomain.getUsername().equals("errorTest")) {
+            log.error("parametro: "+userDomain);
+            throw new RuntimeException("error simulado para el rollback de update");
+        }
+        userDao.save(userDomain);
+    }
+    @Transactional(propagation = Propagation.SUPPORTS) //mejor si para el delete es support y el update not support
+    public void setAttributeDelete(UserDomain userDomain) {
+        userDomain.setBio("cuenta eliminada");
+        userDomain.setAvatarUrl("url-de-perfil-eliminado");
+        userDao.save(userDomain);
+        if (userDomain.getUsername().equals("admin")) {
+            throw new RuntimeException("error simulado para el rollback de delete");
+        }
     }
 
 }
