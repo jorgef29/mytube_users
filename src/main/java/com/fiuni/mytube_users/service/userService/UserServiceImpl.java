@@ -9,6 +9,7 @@ import com.fiuni.mytube_users.dao.IUserDao;
 import com.fiuni.mytube_users.dto.UserDTOCreate;
 import com.fiuni.mytube_users.exception.ResourceNotFoundException;
 import com.fiuni.mytube_users.service.baseService.BaseServiceImpl;
+import com.fiuni.mytube_users.service.utils.MyTransactionService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.cache.annotation.CacheEvict;
@@ -30,8 +31,8 @@ import org.springframework.web.server.ResponseStatusException;
 import java.util.List;
 import java.util.stream.Collectors;
 
+
 @Service
-@Transactional
 @Slf4j
 public class UserServiceImpl extends BaseServiceImpl<UserDTO, UserDomain, UserResult> implements IUserService {
 
@@ -41,6 +42,9 @@ public class UserServiceImpl extends BaseServiceImpl<UserDTO, UserDomain, UserRe
     private RedisCacheManager redisCacheManager;
     @Autowired
     private IRoleDao roleDao;
+
+    @Autowired
+    private MyTransactionService myTransactionService;
 
     @Override
     @Transactional
@@ -61,8 +65,8 @@ public class UserServiceImpl extends BaseServiceImpl<UserDTO, UserDomain, UserRe
 
 
     @Override
-    @Transactional(readOnly = true, propagation = Propagation.SUPPORTS)
-    @Cacheable(value = "my_tube_users",key = "'user_'+#id",unless = "#result == null" ) //unless para no poner objetos nulos en cache
+    @Transactional(readOnly = true)
+    //@Cacheable(value = "my_tube_users",key = "'user_'+#id",unless = "#result == null" ) //unless para no poner objetos nulos en cache
     public UserDTO getById(Integer id) {
         UserDomain userDomain = userDao.findById(id)
                 .orElse(null);
@@ -77,16 +81,16 @@ public class UserServiceImpl extends BaseServiceImpl<UserDTO, UserDomain, UserRe
     }
 
     @Override
-    @Transactional(readOnly = true, propagation = Propagation.NOT_SUPPORTED) //not supported
+    @Transactional(readOnly = true) //not supported
     public UserResult getAll(Pageable pageable) {
         // Obtener todos los usuarios no eliminados con paginación
         Page<UserDomain> page = userDao.findAllByDeletedFalse(pageable);
         UserResult result = new UserResult();
         List<UserDTO> userList = convertDomainListToDtoList(page.getContent());
-        for(UserDTO u:userList){
+        /*for(UserDTO u:userList){
             redisCacheManager.getCache("my_tube_users").put("user_"+u.get_id(),u);
             log.info("usuario en cache: " + u);
-        }
+        }*/
         result.setUsers(userList);
         return result;
     }
@@ -121,9 +125,10 @@ public class UserServiceImpl extends BaseServiceImpl<UserDTO, UserDomain, UserRe
 
 
     @Override // cacheable no se puede porque pone en cache antes de la ejecucion
-    @CachePut(value = "mytube_users", key = "'user_'+ #result._id")
+    //@CachePut(value = "mytube_users", key = "'user_'+ #result._id")
     @Transactional(rollbackFor = Exception.class) //rollback para todas las excepciones
     public UserDTO createUser (UserDTOCreate dto) {
+        log.info("Iniciando creacion de usuario: "+dto);
         UserDomain userDomain = new UserDomain();
 
         userDomain.setUsername(dto.getUsername());
@@ -134,88 +139,114 @@ public class UserServiceImpl extends BaseServiceImpl<UserDTO, UserDomain, UserRe
         userDomain.setRole(roleDao.findByName("new").orElse(null));
         userDomain.setDeleted(false);
         //guardar
-        UserDomain result = userDao.save(userDomain);
-        //asignar demas atributos por defecto
-        assignDefaultAttribute(result);
-        return convertDomainToDto(result);
+        try{
+            UserDomain result = userDao.save(userDomain);
+            log.info("usuario creado: " + result);
+            //asignar demas atributos por defecto
+            assignDefaultAttribute(result);
+            log.info("Creacion completada");
+            return convertDomainToDto(result);
+        }catch (Exception e){
+            log.error("error durante la creacion, realizando rollback",e.getMessage());
+            throw e;
+        }
     }
 
     @Override
-    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    //@Transactional(propagation = Propagation.REQUIRES_NEW)
+    @Transactional(propagation = Propagation.NEVER)
     public void changePassword(Integer id, UserDTOCreate dto){
         UserDomain userDomain = userDao.findByIdAndDeletedFalse(id).orElse(null);
         userDomain.setPassword(dto.getPassword());
+        setAttribute(userDomain);
         userDao.save(userDomain);
+
     }
 
     @Override
-    @Transactional
-    @CacheEvict(value = "my_tube_users", key = "'user_'+#id")
+    //@Transactional(rollbackFor = Exception.class)
+    @Transactional(propagation = Propagation.SUPPORTS)
+    //@CacheEvict(value = "my_tube_users", key = "'user_'+#id")
     public void deleteUser(Integer id) {
         UserDomain userDomain = userDao.findByIdAndDeletedFalse(id).orElse(null);
         if (userDomain != null) {
             userDomain.setDeleted(true);
             userDao.save(userDomain);
+            log.info("eliminando usuario: " + userDomain);
+            log.info("");
             setAttributeDelete(userDomain);
         } else {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Usuario no encontrado con el ID: " + id);
         }
     }
 
+    //@Override
+    //@Transactional(propagation = Propagation.REQUIRES_NEW, rollbackFor = Exception.class)
+    //@CachePut(value = "my_tube_users", key = "'user_' + #id")
     @Override
-    @Transactional(rollbackFor = Exception.class)
-    @CachePut(value = "my_tube_users", key = "'user_' + #id")
+    //@Transactional(propagation = Propagation.REQUIRES_NEW, rollbackFor = Exception.class)
+    @Transactional(propagation = Propagation.NOT_SUPPORTED, rollbackFor = Exception.class)
     public UserDTO updateUser(Integer id, UserDTO dto) {
         // Buscar el usuario existente en la base de datos
         UserDomain userDomain = userDao.findByIdAndDeletedFalse(id)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Usuario no encontrado con el ID: " + id));
 
         // Actualizar los campos del usuario con los valores del DTO
+        log.info("Actualizando datos de: "+userDomain);
+
         userDomain.setUsername(dto.getUsername());
         userDomain.setEmail(dto.getEmail());
-        userDomain.setAvatarUrl(dto.getAvatarUrl());
+        userDomain.setAvatarUrl(dto.getAvatarUrl()); // Actualización en la transacción principal
         userDomain.setBio(dto.getBio());
         userDomain.setRole(roleDao.findByName(dto.getRoleName()).orElse(null));
         userDomain.setRegistrationDate(dto.getRegistrationDate());
 
-        // Guardar los cambios en la base de datos
-        log.warn("Transacción activa en updateUser, guardando cambios...");
-        UserDomain updatedDomain = userDao.save(userDomain);
-
+        // Guardar los cambios iniciales en la transacción principal
+        userDao.save(userDomain);
+        log.info("datos principales actualizados");
         try {
-            setAttributeUpdate(updatedDomain);
-        } catch (Exception e) {
-            log.error("Error en setAttributeUpdate, cambios en avatar no aplicados, pero cambios en bio guardados", e);
-        }
+            // Llamar al metodo que requiere una nueva transacción para actualizar el avatarUrl
+            log.info("llamando a setAttribute");
+            myTransactionService.setAttributeUpdate(id);
 
+        } catch (Exception e) {
+            log.error("Error en setAttributeUpdate", e);
+            throw e;
+        }
         // Convertir el dominio actualizado a DTO y devolverlo
-        return convertDomainToDto(updatedDomain);
+        return convertDomainToDto(userDomain);
     }
+
+
 
     //LLAMADAS INDIRECTAS
     @Transactional(propagation = Propagation.REQUIRED)
     public void assignDefaultAttribute(UserDomain userDomain) {
+        log.info("Asignando valores por defecto a: "+userDomain);
         userDomain.setRegistrationDate(new Date());
-        userDomain.setAvatarUrl("url-generica");
+        userDomain.setAvatarUrl("foto-generica.jpg");
         userDomain.setBio("nuevo usuario");
         userDomain.setRole(roleDao.findByName("regular").orElse(null));
         if(userDomain.getUsername().equals("errorTest")){
-            log.error("parametro: "+userDomain);
+            log.error("Error simulado para el rollback en assignDefaultAttribute");
             throw new RuntimeException("error simulado para el rollback");
         }
         userDao.save(userDomain);
     }
-    @Transactional(propagation = Propagation.REQUIRES_NEW)
-    public void setAttributeUpdate(UserDomain userDomain) {
-        log.warn("setAttributeUpdate ejecutado SIN transacción");
-        userDomain.setAvatarUrl("url-actualizada-por-setAttribute");
+   /* @Transactional(propagation = Propagation.REQUIRES_NEW)
+    //@CachePut(value = "my_tube_users", key = "'user_' + #userDomain.getId()")
+    public void setAttributeUpdate(Integer id) {
+        UserDomain userDomain = userDao.findByIdAndDeletedFalse(id).orElse(null);
+        log.warn("setAttributeUpdate ejecutado SIN transacción"+userDomain);
+        userDomain.setAvatarUrl("url-final-ahora-si");
         if (userDomain.getUsername().equals("errorTest")) {
             log.error("parametro: "+userDomain);
             throw new RuntimeException("error simulado para el rollback de update");
         }
         userDao.save(userDomain);
-    }
-    @Transactional(propagation = Propagation.SUPPORTS) //mejor si para el delete es support y el update not support
+        log.warn("llega a guardar despues de la excepcion");
+    }*/
+    @Transactional(propagation = Propagation.SUPPORTS, rollbackFor = Exception.class)
     public void setAttributeDelete(UserDomain userDomain) {
         userDomain.setBio("cuenta eliminada");
         userDomain.setAvatarUrl("url-de-perfil-eliminado");
@@ -224,5 +255,12 @@ public class UserServiceImpl extends BaseServiceImpl<UserDTO, UserDomain, UserRe
             throw new RuntimeException("error simulado para el rollback de delete");
         }
     }
-
+    @Transactional(propagation = Propagation.MANDATORY)
+    public void setAttribute(UserDomain userDomain) {
+        userDomain.setBio("actualizacion de seguridad");
+        if (userDomain.getUsername().equals("admin")) {
+            throw new RuntimeException("error simulado para el rollback de delete");
+        }
+        userDao.save(userDomain);
+    }
 }

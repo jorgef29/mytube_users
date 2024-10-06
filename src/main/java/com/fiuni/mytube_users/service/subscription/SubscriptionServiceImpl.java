@@ -10,6 +10,7 @@
     import com.fiuni.mytube_users.exception.BadRequestException;
     import com.fiuni.mytube_users.exception.ResourceNotFoundException;
     import com.fiuni.mytube_users.service.baseService.BaseServiceImpl;
+    import com.fiuni.mytube_users.service.utils.MyTransactionService;
     import lombok.extern.slf4j.Slf4j;
     import org.springframework.beans.factory.annotation.Autowired;
     import org.springframework.cache.annotation.CacheEvict;
@@ -38,6 +39,8 @@
         private ISubscriptionDao subscriptionDao;
         @Autowired
         private RedisCacheManager redisCacheManager;
+        @Autowired
+        private MyTransactionService myTransactionService;
 
         @Override
         protected SubscriptionDTO convertDomainToDto(SubscriptionDomain domain) {
@@ -74,34 +77,27 @@
         }
 
         @Override
-        @CachePut(value = "my_tube_subscriptions",key = "'subscription_'+ #result.get_id()")
-        @Transactional(propagation = Propagation.REQUIRED, rollbackFor = Exception.class)
+        //@CachePut(value = "my_tube_subscriptions",key = "'subscription_'+ #result.get_id()")
+        @Transactional(propagation = Propagation.NEVER, rollbackFor = Exception.class)
         public SubscriptionDTO save(SubscriptionDTO dto) {
-            try{
-                SubscriptionDomain domain = convertDtoToDomain(dto);
+            SubscriptionDomain domain = convertDtoToDomain(dto);
 
-                // Guardar la suscripción en la base de datos
-                SubscriptionDomain savedDomain = subscriptionDao.save(domain);
-                log.info("subscription guardado en cache: {}", savedDomain);
-                log.warn("Iniciando transaccion not_supported...");
-                /*try {
-                    setDateToday(savedDomain);
-                } catch (RuntimeException e) {
-                    log.error("Error en set date ", e);
-                }*/
+            // Guardar la suscripción en la base de datos
+            SubscriptionDomain savedDomain = subscriptionDao.save(domain);
+            log.warn("Suscripción guardada: " + savedDomain);
 
-                setDateToday(savedDomain);
-                // Convertir el dominio guardado de nuevo a DTO y devolverlo
-                SubscriptionDTO result = convertDomainToDto(savedDomain);
-                log.warn("resultado: {}", result);
-                return result;
-            } catch (Exception e) {
-                throw new BadRequestException("Bad request to save subscription");
-            }
+            // Llamar al metodo con Propagation.NEVER
+            myTransactionService.setDateToday(savedDomain);
+
+            // Convertir el dominio guardado de nuevo a DTO y devolverlo
+            SubscriptionDTO result = convertDomainToDto(savedDomain);
+            log.warn("Resultado: {}", result);
+            return result;
         }
 
         @Override
-        @Cacheable(value = "my_tube_subscription",key = "'subsctiption'+#id")
+        //@Cacheable(value = "my_tube_subscription",key = "'subsctiption'+#id")
+        @Transactional(readOnly = true)
         public SubscriptionDTO getById(Integer id) {
             SubscriptionDomain domain = subscriptionDao.findById(id)
                     .orElseThrow(() -> new ResourceNotFoundException("Subscription con id: "+ id +" no encontrado"));
@@ -146,7 +142,8 @@
         }
 
         @Override
-        @CacheEvict(value = "my_tube_subscriptions", key = "'subscription_'+#id")
+        //@CacheEvict(value = "my_tube_subscriptions", key = "'subscription_'+#id")
+        @Transactional(propagation = Propagation.SUPPORTS)
         public void deleteSubscription(Integer id) {
             // Verificar si la suscripción existe
             SubscriptionDomain subscription = subscriptionDao.findById(id)
@@ -154,38 +151,28 @@
 
             // Eliminar la suscripción
             subscriptionDao.deleteById(id);
+            log.info("Suscripcion eliminada con id "+ id);
         }
 
         @Override
+        @Transactional(readOnly = true)
         public SubscriptionResult getAll(Pageable pageable) {
             Page<SubscriptionDomain> page = subscriptionDao.findAll(pageable);
             SubscriptionResult result = new SubscriptionResult();
             List<SubscriptionDTO> dtos = convertDomainListToDtoList(page.getContent());
-            for(SubscriptionDTO dto : dtos) {
+            /*for(SubscriptionDTO dto : dtos) {
                 redisCacheManager.getCache("my_tube_subscriptions").put("my_tube_subscriptions" + dto.get_id(), dto);
                 log.info("en cache" + dto);
-            }
+            }*/
             result.setSubscriptions(dtos);
             return result;
         }
 
         //FUNCIONES PARA LLAMADAS INDIRECTAS
-        @Transactional(propagation = Propagation.NEVER) // Fuera de la transacción principal
+        /*@Transactional(propagation = Propagation.NEVER) // Fuera de la transacción principal
         public void setDateToday(SubscriptionDomain subscription) {
-            log.warn("parametro: "+subscription.getSubscriptionDate());
-            try {
-                // Modificar la fecha de suscripción
-                subscription.setSubscriptionDate(new Date());
-
-                // Simular un fallo cuando el usuario tiene id 2
-                if (subscription.getUser().getId()== 2) {
-                    throw new Exception("Error intencional en setDateToday");
-                }
-
-            } catch (Exception e) {
-                // Capturar la excepción y no hacer nada (los cambios no se guardarán)
-                log.error("Se produjo una excepción en setDateToday, no se guardarán los cambios.", e);
-                throw new RuntimeException();
-            }
-        }
+            log.info("parametro: "+subscription.getSubscriptionDate());
+            subscription.setSubscriptionDate(new Date());
+            subscriptionDao.save(subscription);
+        }*/
     }
