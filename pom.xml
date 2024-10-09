@@ -11,6 +11,7 @@
     <groupId>com.fiuni</groupId>
     <artifactId>mytube_users</artifactId>
     <version>0.0.1-SNAPSHOT</version>
+    <packaging>war</packaging>
     <name>mytube_users</name>
     <description>mytube_users</description>
     <url/>
@@ -118,6 +119,15 @@
     <build>
         <plugins>
             <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-war-plugin</artifactId>
+                <version>3.3.2</version>
+                <configuration>
+                    <!-- Indicar que no se incluya Tomcat embebido -->
+                    <failOnMissingWebXml>false</failOnMissingWebXml>
+                </configuration>
+            </plugin>
+            <plugin>
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>
                 <configuration>
@@ -127,6 +137,7 @@
                             <artifactId>lombok</artifactId>
                         </exclude>
                     </excludes>
+                    <layout>WAR</layout>
                 </configuration>
             </plugin>
             <plugin>
