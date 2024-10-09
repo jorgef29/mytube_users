@@ -70,11 +70,10 @@
 
         <dependency>
             <groupId>com.fiuni</groupId>
-            <artifactId>mytube</artifactId>
+            <artifactId>mytube-beans</artifactId>
             <version>1.0</version>
-            <scope>system</scope>
-            <systemPath>${project.basedir}/libs/mytube-beans.jar</systemPath>
         </dependency>
+
 
         <dependency>
             <groupId>org.slf4j</groupId>
@@ -112,7 +111,33 @@
                     </excludes>
                 </configuration>
             </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-resources-plugin</artifactId>
+                <version>3.3.0</version>
+                <executions>
+                    <execution>
+                        <id>copy-libs</id>
+                        <phase>prepare-package</phase>
+                        <goals>
+                            <goal>copy-resources</goal>
+                        </goals>
+                        <configuration>
+                            <outputDirectory>${project.build.directory}/lib</outputDirectory>
+                            <resources>
+                                <resource>
+                                    <directory>${project.basedir}/libs</directory>
+                                    <includes>
+                                        <include>mytube-beans.jar</include>
+                                    </includes>
+                                </resource>
+                            </resources>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
         </plugins>
     </build>
+
 
 </project>
