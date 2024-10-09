@@ -78,7 +78,8 @@
 
         @Override
         //@CachePut(value = "my_tube_subscriptions",key = "'subscription_'+ #result.get_id()")
-        @Transactional(propagation = Propagation.NEVER, rollbackFor = Exception.class)
+        //@Transactional(propagation = Propagation.NEVER, rollbackFor = Exception.class)
+        @Transactional(propagation = Propagation.NEVER)
         public SubscriptionDTO save(SubscriptionDTO dto) {
             SubscriptionDomain domain = convertDtoToDomain(dto);
 

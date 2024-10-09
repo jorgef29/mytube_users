@@ -9,6 +9,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import java.util.Date;
 
@@ -30,18 +31,21 @@ public class MyTransactionService {
         // Actualización del avatarUrl dentro de una nueva transacción
         userDomain.setAvatarUrl("url-actualizado");
         log.warn("Actualizando avatarUrl a: " + userDomain.getAvatarUrl());
-
+        userDao.save(userDomain); // Guardar el cambio en la base de datos
         // Simular un error si el nombre del usuario es 'errorTest'
         if (userDomain.getUsername().equals("errorTest")) {
             log.error("parametro: " + userDomain);
             throw new RuntimeException("error simulado para el rollback de update");
         }
-        userDao.save(userDomain); // Guardar el cambio en la base de datos
         log.warn("Avatar URL guardado: " + userDomain.getAvatarUrl());
     }
 
-    @Transactional(propagation = Propagation.NEVER)
+    //@Transactional(propagation = Propagation.NOT_SUPPORTED)
+    @Transactional(propagation = Propagation.REQUIRES_NEW, rollbackFor = Exception.class)
     public void setDateToday(SubscriptionDomain subscription){
+        log.info("iniciado setDateToday");
+        boolean isTransactionActive = TransactionSynchronizationManager.isActualTransactionActive();
+        log.info("¿Está activa una transacción?: " + isTransactionActive);
         subscription.setSubscriptionDate(new Date());
         subscriptionDao.save(subscription);
     }

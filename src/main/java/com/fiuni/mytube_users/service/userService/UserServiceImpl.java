@@ -30,7 +30,7 @@ import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
 import java.util.stream.Collectors;
-
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 @Service
 @Slf4j
@@ -126,7 +126,8 @@ public class UserServiceImpl extends BaseServiceImpl<UserDTO, UserDomain, UserRe
 
     @Override // cacheable no se puede porque pone en cache antes de la ejecucion
     //@CachePut(value = "mytube_users", key = "'user_'+ #result._id")
-    @Transactional(rollbackFor = Exception.class) //rollback para todas las excepciones
+    //@Transactional(propagation = Propagation.NEVER, rollbackFor = Exception.class) //rollback para todas las excepciones
+    @Transactional
     public UserDTO createUser (UserDTOCreate dto) {
         log.info("Iniciando creacion de usuario: "+dto);
         UserDomain userDomain = new UserDomain();
@@ -154,7 +155,7 @@ public class UserServiceImpl extends BaseServiceImpl<UserDTO, UserDomain, UserRe
 
     @Override
     //@Transactional(propagation = Propagation.REQUIRES_NEW)
-    @Transactional(propagation = Propagation.NEVER)
+    //@Transactional(propagation = Propagation.NEVER)
     public void changePassword(Integer id, UserDTOCreate dto){
         UserDomain userDomain = userDao.findByIdAndDeletedFalse(id).orElse(null);
         userDomain.setPassword(dto.getPassword());
@@ -164,8 +165,11 @@ public class UserServiceImpl extends BaseServiceImpl<UserDTO, UserDomain, UserRe
     }
 
     @Override
+    //@Transactional(propagation = Propagation.MANDATORY)
     //@Transactional(rollbackFor = Exception.class)
-    @Transactional(propagation = Propagation.SUPPORTS)
+    //@Transactional(propagation = Propagation.NEVER, rollbackFor = Exception.class)
+    //@Transactional(propagation = Propagation.SUPPORTS)
+    @Transactional(propagation = Propagation.REQUIRES_NEW,rollbackFor = Exception.class, timeout = 2)
     //@CacheEvict(value = "my_tube_users", key = "'user_'+#id")
     public void deleteUser(Integer id) {
         UserDomain userDomain = userDao.findByIdAndDeletedFalse(id).orElse(null);
@@ -173,7 +177,7 @@ public class UserServiceImpl extends BaseServiceImpl<UserDTO, UserDomain, UserRe
             userDomain.setDeleted(true);
             userDao.save(userDomain);
             log.info("eliminando usuario: " + userDomain);
-            log.info("");
+            if(id == 2){throw new RuntimeException("Exepcion generada en deleteUSer");}
             setAttributeDelete(userDomain);
         } else {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Usuario no encontrado con el ID: " + id);
@@ -184,8 +188,9 @@ public class UserServiceImpl extends BaseServiceImpl<UserDTO, UserDomain, UserRe
     //@Transactional(propagation = Propagation.REQUIRES_NEW, rollbackFor = Exception.class)
     //@CachePut(value = "my_tube_users", key = "'user_' + #id")
     @Override
-    //@Transactional(propagation = Propagation.REQUIRES_NEW, rollbackFor = Exception.class)
-    @Transactional(propagation = Propagation.NOT_SUPPORTED, rollbackFor = Exception.class)
+    @Transactional(propagation = Propagation.REQUIRES_NEW, rollbackFor = Exception.class)
+    //@Transactional(propagation = Propagation.NOT_SUPPORTED, rollbackFor = Exception.class)
+    //@Transactional(propagation = Propagation.REQUIRED)
     public UserDTO updateUser(Integer id, UserDTO dto) {
         // Buscar el usuario existente en la base de datos
         UserDomain userDomain = userDao.findByIdAndDeletedFalse(id)
@@ -208,7 +213,7 @@ public class UserServiceImpl extends BaseServiceImpl<UserDTO, UserDomain, UserRe
             // Llamar al metodo que requiere una nueva transacción para actualizar el avatarUrl
             log.info("llamando a setAttribute");
             myTransactionService.setAttributeUpdate(id);
-
+            userDao.flush();
         } catch (Exception e) {
             log.error("Error en setAttributeUpdate", e);
             throw e;
@@ -220,9 +225,12 @@ public class UserServiceImpl extends BaseServiceImpl<UserDTO, UserDomain, UserRe
 
 
     //LLAMADAS INDIRECTAS
-    @Transactional(propagation = Propagation.REQUIRED)
+    //@Transactional(propagation = Propagation.REQUIRED)
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
     public void assignDefaultAttribute(UserDomain userDomain) {
         log.info("Asignando valores por defecto a: "+userDomain);
+
+
         userDomain.setRegistrationDate(new Date());
         userDomain.setAvatarUrl("foto-generica.jpg");
         userDomain.setBio("nuevo usuario");
@@ -246,10 +254,16 @@ public class UserServiceImpl extends BaseServiceImpl<UserDTO, UserDomain, UserRe
         userDao.save(userDomain);
         log.warn("llega a guardar despues de la excepcion");
     }*/
-    @Transactional(propagation = Propagation.SUPPORTS, rollbackFor = Exception.class)
+    //@Transactional(propagation = Propagation.SUPPORTS, rollbackFor = Exception.class)
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void setAttributeDelete(UserDomain userDomain) {
+        boolean isTransactionActive = TransactionSynchronizationManager.isActualTransactionActive();
+        String transactionName = TransactionSynchronizationManager.getCurrentTransactionName();
+        log.info("setAttributeDelete: ¿Está activa una transacción?: " + isTransactionActive + ", Nombre de transacción: " + transactionName);
+
         userDomain.setBio("cuenta eliminada");
         userDomain.setAvatarUrl("url-de-perfil-eliminado");
+
         userDao.save(userDomain);
         if (userDomain.getUsername().equals("admin")) {
             throw new RuntimeException("error simulado para el rollback de delete");
