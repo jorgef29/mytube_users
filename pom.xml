@@ -155,7 +155,7 @@
                             <outputDirectory>${project.build.directory}/lib</outputDirectory>
                             <resources>
                                 <resource>
-                                    <directory>${project.basedir}/libs</directory>
+                                    <directory>${project.basedir}/lib</directory>
                                     <includes>
                                         <include>mytube-beans.jar</include>
                                     </includes>
