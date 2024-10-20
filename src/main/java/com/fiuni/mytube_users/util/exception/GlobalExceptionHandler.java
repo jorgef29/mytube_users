@@ -1,4 +1,4 @@
-package com.fiuni.mytube_users.exception;
+package com.fiuni.mytube_users.util.exception;
 
 import org.springframework.data.rest.webmvc.ResourceNotFoundException;
 import org.springframework.http.HttpStatus;

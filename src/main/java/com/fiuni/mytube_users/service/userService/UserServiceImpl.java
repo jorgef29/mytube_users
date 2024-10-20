@@ -4,13 +4,11 @@ import com.fiuni.mytube.domain.profile.ProfileDomain;
 import com.fiuni.mytube.dto.user.UserDTO;
 import com.fiuni.mytube.domain.user.UserDomain;
 import com.fiuni.mytube.dto.user.UserResult;
-import com.fiuni.mytube.dto.video.VideoDTO;
 import com.fiuni.mytube_users.dao.IProfileDAO;
 import com.fiuni.mytube_users.dao.IRoleDao;
 import com.fiuni.mytube_users.dao.IUserDao;
 import com.fiuni.mytube_users.dto.UserDTOComplete;
 import com.fiuni.mytube_users.dto.UserDTOCreate;
-import com.fiuni.mytube_users.exception.ResourceNotFoundException;
 import com.fiuni.mytube_users.service.baseService.BaseServiceImpl;
 import com.fiuni.mytube_users.util.DateUtil;
 import lombok.extern.slf4j.Slf4j;
@@ -25,13 +23,12 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 
 import java.util.Date;
-import java.util.Optional;
+
 import com.fiuni.mytube.domain.user.RoleDomain;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
-import java.util.stream.Collectors;
 
 @Service
 @Transactional

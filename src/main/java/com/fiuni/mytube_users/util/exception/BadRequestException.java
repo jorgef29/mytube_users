@@ -1,4 +1,4 @@
-package com.fiuni.mytube_users.exception;
+package com.fiuni.mytube_users.util.exception;
 
 public class BadRequestException extends RuntimeException {
 

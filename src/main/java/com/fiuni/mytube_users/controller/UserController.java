@@ -8,16 +8,13 @@ import com.fiuni.mytube_users.dto.UserDTOCreate;
 import com.fiuni.mytube_users.service.subscription.ISubscriptionService;
 import com.fiuni.mytube_users.service.userService.IUserService;
 import lombok.extern.slf4j.Slf4j;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
-import com.fiuni.mytube_users.exception.ResourceNotFoundException;
+import com.fiuni.mytube_users.util.exception.ResourceNotFoundException;
 import java.util.List;
 
 

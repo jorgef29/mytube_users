@@ -7,8 +7,8 @@ import com.fiuni.mytube.dto.subscription.SubscriptionDTO;
 import com.fiuni.mytube.dto.subscription.SubscriptionResult;
 import com.fiuni.mytube_users.dao.ISubscriptionDao;
 import com.fiuni.mytube_users.dao.IUserDao;
-import com.fiuni.mytube_users.exception.BadRequestException;
-import com.fiuni.mytube_users.exception.ResourceNotFoundException;
+import com.fiuni.mytube_users.util.exception.BadRequestException;
+import com.fiuni.mytube_users.util.exception.ResourceNotFoundException;
 import com.fiuni.mytube_users.service.baseService.BaseServiceImpl;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -21,7 +21,6 @@ import org.springframework.data.redis.cache.RedisCacheManager;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
-import com.fiuni.mytube_users.exception.ResourceNotFoundException;
 
 import java.util.Date;
 import java.util.List;
