@@ -83,11 +83,13 @@ public class UserServiceImpl extends BaseServiceImpl<UserDTO, UserDomain, UserRe
     }
     private UserDTOComplete convertDomainToDtoComplete(UserDomain user, ProfileDomain profile) {
         UserDTOComplete dto = new UserDTOComplete();
+        dto.set_id(profile.getId());
         dto.setUsername(user.getUsername());
         dto.setEmail(user.getEmail());
         dto.setAvatarUrl(profile.getAvatarUrl());
         dto.setBio(profile.getBio().toString());
         dto.setBirthday(profile.getBirthday());
+        dto.setRegistrationDate(profile.getRegistrationDate());
         return dto;
     }
 
@@ -167,11 +169,12 @@ public class UserServiceImpl extends BaseServiceImpl<UserDTO, UserDomain, UserRe
         profileDomain.setBio(dto.getBio());
         profileDomain.setAvatarUrl(dto.getAvatarUrl());
         profileDomain.setBirthday(dto.getBirthday());
+        //profileDomain.setRegistrationDate(dto.getRegistrationDate());
         ProfileDomain updateProfileDomain= profileDAO.save(profileDomain);
 
         // Convertir el dominio actualizado a DTO y devolverlo
         //return convertDomainToDto(updatedDomain);
-        return convertDomainToDtoComplete(updatedDomain,updateProfileDomain);
+        return convertDomainToDtoComplete(updatedDomain, updateProfileDomain);
     }
 
 }

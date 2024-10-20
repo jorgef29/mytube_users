@@ -12,9 +12,11 @@ import java.util.Date;
 @AllArgsConstructor
 @NoArgsConstructor
 public class UserDTOComplete extends BaseDTO {
+    private static final long serialVersionUID = 1L;
     private String username;
     private String email;
     private String avatarUrl;
     private String bio;
     private Date birthday;
+    private Date registrationDate;
 }
