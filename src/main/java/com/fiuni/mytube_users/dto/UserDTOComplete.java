@@ -17,6 +17,6 @@ public class UserDTOComplete extends BaseDTO {
     private String email;
     private String avatarUrl;
     private String bio;
-    private Date birthday;
-    private Date registrationDate;
+    private String birthday;
+    private String registrationDate;
 }

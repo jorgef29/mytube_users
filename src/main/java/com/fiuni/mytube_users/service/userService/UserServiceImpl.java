@@ -12,6 +12,7 @@ import com.fiuni.mytube_users.dto.UserDTOComplete;
 import com.fiuni.mytube_users.dto.UserDTOCreate;
 import com.fiuni.mytube_users.exception.ResourceNotFoundException;
 import com.fiuni.mytube_users.service.baseService.BaseServiceImpl;
+import com.fiuni.mytube_users.util.DateUtil;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.cache.annotation.CacheEvict;
@@ -39,7 +40,6 @@ public class UserServiceImpl extends BaseServiceImpl<UserDTO, UserDomain, UserRe
 
     @Autowired
     private IUserDao userDao;
-
     @Autowired
     private IProfileDAO profileDAO;
     @Autowired
@@ -88,8 +88,8 @@ public class UserServiceImpl extends BaseServiceImpl<UserDTO, UserDomain, UserRe
         dto.setEmail(user.getEmail());
         dto.setAvatarUrl(profile.getAvatarUrl());
         dto.setBio(profile.getBio().toString());
-        dto.setBirthday(profile.getBirthday());
-        dto.setRegistrationDate(profile.getRegistrationDate());
+        dto.setBirthday(DateUtil.formatDate(profile.getBirthday()));
+        dto.setRegistrationDate(DateUtil.formatDate(profile.getRegistrationDate()));
         return dto;
     }
 
@@ -168,7 +168,7 @@ public class UserServiceImpl extends BaseServiceImpl<UserDTO, UserDomain, UserRe
 
         profileDomain.setBio(dto.getBio());
         profileDomain.setAvatarUrl(dto.getAvatarUrl());
-        profileDomain.setBirthday(dto.getBirthday());
+        profileDomain.setBirthday(DateUtil.parseToDate(dto.getBirthday()));
         //profileDomain.setRegistrationDate(dto.getRegistrationDate());
         ProfileDomain updateProfileDomain= profileDAO.save(profileDomain);
 
