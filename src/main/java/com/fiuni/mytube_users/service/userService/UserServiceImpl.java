@@ -1,11 +1,14 @@
 package com.fiuni.mytube_users.service.userService;
 
+import com.fiuni.mytube.domain.profile.ProfileDomain;
 import com.fiuni.mytube.dto.user.UserDTO;
 import com.fiuni.mytube.domain.user.UserDomain;
 import com.fiuni.mytube.dto.user.UserResult;
 import com.fiuni.mytube.dto.video.VideoDTO;
+import com.fiuni.mytube_users.dao.IProfileDAO;
 import com.fiuni.mytube_users.dao.IRoleDao;
 import com.fiuni.mytube_users.dao.IUserDao;
+import com.fiuni.mytube_users.dto.UserDTOComplete;
 import com.fiuni.mytube_users.dto.UserDTOCreate;
 import com.fiuni.mytube_users.exception.ResourceNotFoundException;
 import com.fiuni.mytube_users.service.baseService.BaseServiceImpl;
@@ -36,45 +39,22 @@ public class UserServiceImpl extends BaseServiceImpl<UserDTO, UserDomain, UserRe
 
     @Autowired
     private IUserDao userDao;
+
+    @Autowired
+    private IProfileDAO profileDAO;
     @Autowired
     private RedisCacheManager redisCacheManager;
     @Autowired
     private IRoleDao roleDao;
-
-    @Override
-    @Transactional
-    @CachePut(value="my_tube_users", key="'user_'+#result.get_id()")
-    public UserDTO save(UserDTO dto) {
-        UserDomain userDomain = convertDtoToDomain(dto);
-
-
-        // Guardar en la base de datos usando el repositorio
-        userDomain = userDao.save(userDomain);
-        log.info("usuario creado: " + userDomain);
-
-        // Convertir de dominio a DTO y devolver el DTO guardado
-        UserDTO result = convertDomainToDto(userDomain);
-
-        log.info("Guardando en cache con clave: user_" + result.get_id());
-
-        return result;
-    }
 
 
     @Override
     @Transactional(readOnly = true)
     @Cacheable(value = "my_tube_users",key = "'user_'+#id",unless = "#result == null" ) //unless para no poner objetos nulos en cache
     public UserDTO getById(Integer id) {
-        UserDomain userDomain = userDao.findById(id)
-                .orElse(null);
+        UserDomain userDomain = userDao.findById(id).orElse(null);
         log.info("usuario obtenido: " + userDomain);
-        // Convertir de dominio a DTO y devolver
         return convertDomainToDto(userDomain);
-    }
-
-    @Override //VER DONDE ESTA LA CABECERA DE ESTE METODO
-    public UserResult getAll() {
-        return null;
     }
 
     @Override
@@ -91,13 +71,6 @@ public class UserServiceImpl extends BaseServiceImpl<UserDTO, UserDomain, UserRe
         result.setUsers(userList);
         return result;
     }
-    //TIENE QUE ESTAR EN BASEIMP | En teoria debe funcionar igual porque la implementacion esta en baseimpl
-    /*
-    public List<UserDTO> convertDomainListToDtoList(List<UserDomain> domains) {
-        return domains.stream()
-                .map(this::convertDomainToDto)
-                .collect(Collectors.toList());
-    }*/
 
     @Override
     protected UserDTO convertDomainToDto(UserDomain domain) {
@@ -105,10 +78,16 @@ public class UserServiceImpl extends BaseServiceImpl<UserDTO, UserDomain, UserRe
         dto.set_id(domain.getId());
         dto.setUsername(domain.getUsername());
         dto.setEmail(domain.getEmail());
-        dto.setRegistrationDate(domain.getRegistrationDate());
-        dto.setAvatarUrl(domain.getAvatarUrl());
-        dto.setBio(domain.getBio());
         dto.setRoleName(String.valueOf(domain.getRole().getName()));
+        return dto;
+    }
+    private UserDTOComplete convertDomainToDtoComplete(UserDomain user, ProfileDomain profile) {
+        UserDTOComplete dto = new UserDTOComplete();
+        dto.setUsername(user.getUsername());
+        dto.setEmail(user.getEmail());
+        dto.setAvatarUrl(profile.getAvatarUrl());
+        dto.setBio(profile.getBio().toString());
+        dto.setBirthday(profile.getBirthday());
         return dto;
     }
 
@@ -118,9 +97,6 @@ public class UserServiceImpl extends BaseServiceImpl<UserDTO, UserDomain, UserRe
         domain.setId(dto.get_id());
         domain.setUsername(dto.getUsername());
         domain.setEmail(dto.getEmail());
-        domain.setRegistrationDate(dto.getRegistrationDate());
-        domain.setAvatarUrl(dto.getAvatarUrl());
-        domain.setBio(dto.getBio());
         RoleDomain roleDomain = roleDao.findByName(dto.getRoleName()).orElse(null);
         domain.setRole(roleDomain);
         domain.setDeleted(false);
@@ -128,19 +104,26 @@ public class UserServiceImpl extends BaseServiceImpl<UserDTO, UserDomain, UserRe
     }
 
 
+
     @Override // cacheable no se puede porque pone en cache antes de la ejecucion
     @CachePut(value = "mytube_users", key = "'user_'+ #result._id")
     public UserDTO createUser (UserDTOCreate dto) {
         UserDomain userDomain = new UserDomain();
+
         userDomain.setUsername(dto.getUsername());
         userDomain.setEmail(dto.getEmail());
         userDomain.setPassword(dto.getPassword());
         //por defecto role regular
         userDomain.setRole((roleDao.findByName("regular").orElse(null)));
         userDomain.setDeleted(false);
-        userDomain.setRegistrationDate(new Date());
-
         UserDomain result = userDao.save(userDomain);
+
+        //creacion de perfil
+        ProfileDomain profile = new ProfileDomain();
+        profile.setUser(userDomain);
+        profile.setRegistrationDate(new Date());
+        profileDAO.save(profile);
+
         return convertDomainToDto(result);
     }
 
@@ -164,27 +147,31 @@ public class UserServiceImpl extends BaseServiceImpl<UserDTO, UserDomain, UserRe
         }
     }
 
-    @Override
+    //@Override
     @Transactional
     @CachePut(value = "my_tube_users", key = "'user_' + #id")
-    public UserDTO updateUser(Integer id, UserDTO dto) {
+    public UserDTOComplete updateUser(Integer id, UserDTOComplete dto) {
         // Buscar el usuario existente en la base de datos
         UserDomain userDomain = userDao.findByIdAndDeletedFalse(id)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Usuario no encontrado con el ID: " + id));
 
+        ProfileDomain profileDomain = profileDAO.findByUserId(id)
+                .orElseThrow(()->new ResponseStatusException(HttpStatus.NOT_FOUND, "Perfil no encontrado"));
         // Actualizar los campos del usuario con los valores del DTO
         userDomain.setUsername(dto.getUsername());
         userDomain.setEmail(dto.getEmail());
-        userDomain.setAvatarUrl(dto.getAvatarUrl());
-        userDomain.setBio(dto.getBio());
-        userDomain.setRole(roleDao.findByName(dto.getRoleName()).orElse(null));
-        userDomain.setRegistrationDate(dto.getRegistrationDate());
 
         // Guardar los cambios en la base de datos
         UserDomain updatedDomain = userDao.save(userDomain);
 
+        profileDomain.setBio(dto.getBio());
+        profileDomain.setAvatarUrl(dto.getAvatarUrl());
+        profileDomain.setBirthday(dto.getBirthday());
+        ProfileDomain updateProfileDomain= profileDAO.save(profileDomain);
+
         // Convertir el dominio actualizado a DTO y devolverlo
-        return convertDomainToDto(updatedDomain);
+        //return convertDomainToDto(updatedDomain);
+        return convertDomainToDtoComplete(updatedDomain,updateProfileDomain);
     }
 
 }

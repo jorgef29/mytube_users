@@ -3,6 +3,7 @@ package com.fiuni.mytube_users.controller;
 import com.fiuni.mytube.dto.subscription.SubscriptionDTO;
 import com.fiuni.mytube.dto.user.UserDTO;
 import com.fiuni.mytube.dto.user.UserResult;
+import com.fiuni.mytube_users.dto.UserDTOComplete;
 import com.fiuni.mytube_users.dto.UserDTOCreate;
 import com.fiuni.mytube_users.service.subscription.ISubscriptionService;
 import com.fiuni.mytube_users.service.userService.IUserService;
@@ -78,10 +79,10 @@ public class UserController {
 
     //enpoint para actualizar usuario
     @PutMapping("/{id}")
-    public ResponseEntity<UserDTO> updateUser(@PathVariable Integer id, @RequestBody UserDTO userDTO) {
+    public ResponseEntity<UserDTOComplete> updateUser(@PathVariable Integer id, @RequestBody UserDTOComplete userDTO) {
         try {
             log.info("Updating user with ID: {}", id);
-            UserDTO updatedUser = userService.updateUser(id, userDTO);
+            UserDTOComplete updatedUser = userService.updateUser(id, userDTO);
             log.info("Successfully updated user: {}", updatedUser);
             return new ResponseEntity<>(updatedUser, HttpStatus.OK);
         } catch (ResponseStatusException e) {

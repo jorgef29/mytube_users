@@ -70,21 +70,6 @@ public class SubscriptionServiceImpl extends BaseServiceImpl<SubscriptionDTO, Su
         return domain;
     }
 
-    @Override
-    @CachePut(value = "my_tube_subscriptions",key = "'subscription_'+ #result.get_id()")
-    public SubscriptionDTO save(SubscriptionDTO dto) {
-        try{
-            SubscriptionDomain domain = convertDtoToDomain(dto);
-
-            // Guardar la suscripción en la base de datos
-            SubscriptionDomain savedDomain = subscriptionDao.save(domain);
-            log.info("subscription guardado en cache: {}", savedDomain);
-            // Convertir el dominio guardado de nuevo a DTO y devolverlo
-            return convertDomainToDto(savedDomain);
-        } catch (Exception e) {
-            throw new BadRequestException("Bad request to save subscription");
-        }
-    }
 
     @Override
     @Cacheable(value = "my_tube_subscription",key = "'subsctiption'+#id")
@@ -96,20 +81,6 @@ public class SubscriptionServiceImpl extends BaseServiceImpl<SubscriptionDTO, Su
         return convertDomainToDto(domain);
     }
 
-    @Override
-    public SubscriptionResult getAll() {
-        List<SubscriptionDomain> domains = subscriptionDao.findAll();
-
-        // Crear una lista de DTOs a partir de los dominios
-        List<SubscriptionDTO> dtos = domains.stream()
-                .map(this::convertDomainToDto)
-                .collect(Collectors.toList());
-
-        // Crear el resultado con la lista de DTOs
-        SubscriptionResult result = new SubscriptionResult();
-        result.setSubscriptions(dtos);
-        return result;
-    }
 
     @Override
     public List<SubscriptionDTO> getUserSubscriptions(Integer userId) {
@@ -153,5 +124,19 @@ public class SubscriptionServiceImpl extends BaseServiceImpl<SubscriptionDTO, Su
         }
         result.setSubscriptions(dtos);
         return result;
+    }
+    @CachePut(value = "my_tube_subscriptions",key = "'subscription_'+ #result.get_id()")
+    public SubscriptionDTO save(SubscriptionDTO dto) {
+        try{
+            SubscriptionDomain domain = convertDtoToDomain(dto);
+
+            // Guardar la suscripción en la base de datos
+            SubscriptionDomain savedDomain = subscriptionDao.save(domain);
+            log.info("subscription guardado en cache: {}", savedDomain);
+            // Convertir el dominio guardado de nuevo a DTO y devolverlo
+            return convertDomainToDto(savedDomain);
+        } catch (Exception e) {
+            throw new BadRequestException("Bad request to save subscription");
+        }
     }
 }

@@ -117,6 +117,7 @@
 
 
     <build>
+
         <plugins>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
@@ -140,6 +141,8 @@
                     <layout>WAR</layout>
                 </configuration>
             </plugin>
+<!-- puedo eliminar esta seccion ya que uso el mytube-bean desde el repo local de maven
+(~/.m1-repository/com/fiuni/mytube_users)-->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-resources-plugin</artifactId>

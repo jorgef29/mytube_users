@@ -20,6 +20,7 @@ public class SubscriptionController {
     @Autowired
     private ISubscriptionService subscriptionService;
 
+    @CrossOrigin(origins = "http://localhost:5173")
     @GetMapping("/all")
     public ResponseEntity<List<SubscriptionDTO>> getAllSubscriptions(Pageable pageable) {
         log.info("Getting all subscriptions");
