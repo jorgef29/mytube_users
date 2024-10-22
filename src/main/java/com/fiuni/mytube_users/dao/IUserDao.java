@@ -13,4 +13,6 @@ import java.util.Optional;
 public interface IUserDao extends JpaRepository<UserDomain, Integer> {
     Page<UserDomain> findAllByDeletedFalse(Pageable pageable);
     Optional<UserDomain> findByIdAndDeletedFalse(Integer id);
+    boolean existsByEmailAndDeletedFalse(String email);
+    boolean existsByUsernameAndDeletedFalse(String email);
 }

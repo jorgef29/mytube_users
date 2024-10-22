@@ -11,6 +11,8 @@ import com.fiuni.mytube_users.dto.UserDTOComplete;
 import com.fiuni.mytube_users.dto.UserDTOCreate;
 import com.fiuni.mytube_users.service.baseService.BaseServiceImpl;
 import com.fiuni.mytube_users.util.DateUtil;
+import com.fiuni.mytube_users.util.exception.ResourceNotFoundException;
+import com.fiuni.mytube_users.util.exception.UserAlreadyExistsException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.cache.annotation.CacheEvict;
@@ -49,7 +51,8 @@ public class UserServiceImpl extends BaseServiceImpl<UserDTO, UserDomain, UserRe
     @Transactional(readOnly = true)
     @Cacheable(value = "my_tube_users",key = "'user_'+#id",unless = "#result == null" ) //unless para no poner objetos nulos en cache
     public UserDTO getById(Integer id) {
-        UserDomain userDomain = userDao.findById(id).orElse(null);
+        UserDomain userDomain = userDao.findById(id)
+                .orElseThrow(()-> new ResourceNotFoundException("User no encontrado: "+ id));
         log.info("usuario obtenido: " + userDomain);
         return convertDomainToDto(userDomain);
     }
@@ -107,6 +110,10 @@ public class UserServiceImpl extends BaseServiceImpl<UserDTO, UserDomain, UserRe
     @Override // cacheable no se puede porque pone en cache antes de la ejecucion
     @CachePut(value = "mytube_users", key = "'user_'+ #result._id")
     public UserDTO createUser (UserDTOCreate dto) {
+        if(userDao.existsByEmailAndDeletedFalse(dto.getEmail()) ||
+        userDao.existsByUsernameAndDeletedFalse(dto.getUsername())){
+            throw new UserAlreadyExistsException("El usuario ya existe");
+        }
         UserDomain userDomain = new UserDomain();
 
         userDomain.setUsername(dto.getUsername());
@@ -142,7 +149,7 @@ public class UserServiceImpl extends BaseServiceImpl<UserDTO, UserDomain, UserRe
             userDomain.setDeleted(true);
             userDao.save(userDomain);
         } else {
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Usuario no encontrado con el ID: " + id);
+            throw new ResourceNotFoundException("Usuario con id: "+id+" no encontrado");
         }
     }
 
