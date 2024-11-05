@@ -15,7 +15,6 @@ public class SecurityConfig {
                 .authorizeHttpRequests(authorize -> authorize
                         .anyRequest().permitAll()  // Permitir todas las solicitudes sin autenticación
                 )
-                .cors(AbstractHttpConfigurer::disable)  // Deshabilitar CORS
                 .csrf(AbstractHttpConfigurer::disable);  // Deshabilitar CSRF de manera segura
 
         return http.build();
