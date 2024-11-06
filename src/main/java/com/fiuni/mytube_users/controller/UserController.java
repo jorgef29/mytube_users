@@ -140,4 +140,33 @@ public class UserController {
         }
     }
 
+    @GetMapping("/profile/{id}")
+    public ResponseEntity<UserDTOComplete> getUserProfile(@PathVariable Integer id) {
+        try {
+            log.info("Fetching profile for user ID: {}", id);
+            UserDTOComplete userComplete = userService.getUserByIdComplete(id);
+            log.info("Successfully fetched profile for user ID: {}", id);
+            return new ResponseEntity<>(userComplete, HttpStatus.OK);
+        } catch (ResourceNotFoundException e) {
+            log.error("Profile not found for user ID: {}", id, e);
+            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+        } catch (Exception e) {
+            log.error("Error fetching profile for user ID: {}", id, e);
+            return new ResponseEntity<>(null, HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    @GetMapping("/profile/all")
+    public ResponseEntity<List<UserDTOComplete>> getAllUserProfiles() {
+        try {
+            log.info("Fetching all user profiles");
+            List<UserDTOComplete> allUsersComplete = userService.getAllUserDTOComplete();
+            log.info("Successfully fetched all user profiles");
+            return new ResponseEntity<>(allUsersComplete, HttpStatus.OK);
+        } catch (Exception e) {
+            log.error("Error fetching all user profiles", e);
+            return new ResponseEntity<>(null, HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
 }

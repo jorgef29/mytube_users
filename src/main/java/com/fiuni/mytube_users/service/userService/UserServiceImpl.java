@@ -24,6 +24,7 @@ import org.springframework.data.redis.cache.RedisCacheManager;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 
+import java.util.ArrayList;
 import java.util.Date;
 
 import com.fiuni.mytube.domain.user.RoleDomain;
@@ -87,7 +88,7 @@ public class UserServiceImpl extends BaseServiceImpl<UserDTO, UserDomain, UserRe
         dto.setUsername(user.getUsername());
         dto.setEmail(user.getEmail());
         dto.setAvatarUrl(profile.getAvatarUrl());
-        dto.setBio(profile.getBio().toString());
+        dto.setBio(profile.getBio() != null ? profile.getBio().toString() : "");
         dto.setBirthday(DateUtil.formatDate(profile.getBirthday()));
         dto.setRegistrationDate(DateUtil.formatDate(profile.getRegistrationDate()));
         return dto;
@@ -180,5 +181,36 @@ public class UserServiceImpl extends BaseServiceImpl<UserDTO, UserDomain, UserRe
         //return convertDomainToDto(updatedDomain);
         return convertDomainToDtoComplete(updatedDomain, updateProfileDomain);
     }
+
+    @Transactional(readOnly = true)
+    @Cacheable(value = "my_tube_users_complete", key = "'user_complete_'+#id", unless = "#result == null")
+    public UserDTOComplete getUserByIdComplete(Integer id) {
+        // Primero buscamos el perfil utilizando el ID del usuario
+        ProfileDomain profileDomain = profileDAO.findByUserId(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Perfil no encontrado para el usuario: " + id));
+
+        // Luego, obtenemos el usuario a través del perfil encontrado
+        UserDomain userDomain = userDao.findByIdAndDeletedFalse(profileDomain.getUser().getId())
+                .orElseThrow(() -> new ResourceNotFoundException("User no encontrado: " + id));
+
+        // Convertimos ambos dominios en un UserDTOComplete
+        return convertDomainToDtoComplete(userDomain, profileDomain);
+    }
+
+    @Transactional(readOnly = true)
+    @Cacheable(value = "my_tube_users_complete", key = "'user_complete_all'", unless = "#result.isEmpty()")
+    public List<UserDTOComplete> getAllUserDTOComplete() {
+        List<ProfileDomain> profiles = profileDAO.findAll();
+        List<UserDTOComplete> dtoCompleteList = new ArrayList<>();
+
+        for (ProfileDomain profile : profiles) {
+            UserDomain user = profile.getUser();
+            UserDTOComplete dtoComplete = convertDomainToDtoComplete(user, profile);
+            dtoCompleteList.add(dtoComplete);
+        }
+
+        return dtoCompleteList;
+    }
+
 
 }
