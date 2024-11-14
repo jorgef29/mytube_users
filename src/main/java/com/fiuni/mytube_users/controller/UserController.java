@@ -63,15 +63,10 @@ public class UserController {
     //endpoint para guardar usuario
     @PostMapping("/save")
     public ResponseEntity<UserDTO> saveUser(@RequestBody UserDTOCreate userDTO) {
-        try {
             log.info("Saving user: {}", userDTO);
             UserDTO savedUser = userService.createUser(userDTO);
             log.info("Successfully saved user: {}", savedUser);
             return new ResponseEntity<>(savedUser, HttpStatus.CREATED);
-        } catch (Exception e) {
-            log.error("Error saving user: {}", userDTO, e);
-            return new ResponseEntity<>(null, HttpStatus.BAD_REQUEST);
-        }
     }
 
     //enpoint para actualizar usuario
