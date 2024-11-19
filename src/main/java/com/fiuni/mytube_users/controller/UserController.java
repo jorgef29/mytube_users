@@ -178,6 +178,7 @@ public class UserController {
         } catch (Exception e) {
             log.error("Error fetching user ID by email: {}", email, e);
             return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
+            //commit innecesario
         }
     }
 
