@@ -212,5 +212,11 @@ public class UserServiceImpl extends BaseServiceImpl<UserDTO, UserDomain, UserRe
         return dtoCompleteList;
     }
 
+    @Override
+    @Transactional(readOnly = true)
+    public Integer getIdByEmail(String email) {
+        UserDomain userDomain = userDao.findByEmailAndDeletedFalse(email).orElseThrow(() -> new ResourceNotFoundException("User not found with email: " + email));
+        return userDomain.getId();
+    }
 
 }

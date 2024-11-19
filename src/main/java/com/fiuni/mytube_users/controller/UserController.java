@@ -164,4 +164,21 @@ public class UserController {
         }
     }
 
+    // Endpoint para buscar usuario por email y retornar el ID
+    @GetMapping("/search-by-email")
+    public ResponseEntity<Integer> getUserIdByEmail(@RequestParam String email) {
+        try {
+            log.info("Searching user ID by email: {}", email);
+            Integer userId = userService.getIdByEmail(email);
+            log.info("Found user ID: {} for email: {}", userId, email);
+            return new ResponseEntity<>(userId, HttpStatus.OK);
+        } catch (ResourceNotFoundException e) {
+            log.error("User not found with email: {}", email, e);
+            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+        } catch (Exception e) {
+            log.error("Error fetching user ID by email: {}", email, e);
+            return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
 }

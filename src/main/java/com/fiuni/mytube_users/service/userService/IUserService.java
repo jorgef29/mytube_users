@@ -18,4 +18,5 @@ public interface IUserService extends IBaseService<UserDTO, UserResult> {
     UserDTOComplete updateUser(Integer id, UserDTOComplete dto);
     UserDTOComplete getUserByIdComplete(Integer id);
     List<UserDTOComplete> getAllUserDTOComplete();
+    Integer getIdByEmail(String email);
 }

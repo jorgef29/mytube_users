@@ -15,4 +15,5 @@ public interface IUserDao extends JpaRepository<UserDomain, Integer> {
     Optional<UserDomain> findByIdAndDeletedFalse(Integer id);
     boolean existsByEmailAndDeletedFalse(String email);
     boolean existsByUsernameAndDeletedFalse(String email);
+    Optional <UserDomain> findByEmailAndDeletedFalse(String email);
 }
