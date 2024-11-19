@@ -83,6 +83,7 @@ public class UserServiceImpl extends BaseServiceImpl<UserDTO, UserDomain, UserRe
         return dto;
     }
     private UserDTOComplete convertDomainToDtoComplete(UserDomain user, ProfileDomain profile) {
+        log.info("perfil recibido: " + profile);
         UserDTOComplete dto = new UserDTOComplete();
         dto.set_id(profile.getId());
         dto.setUsername(user.getUsername());
@@ -91,6 +92,7 @@ public class UserServiceImpl extends BaseServiceImpl<UserDTO, UserDomain, UserRe
         dto.setBio(profile.getBio() != null ? profile.getBio().toString() : "");
         dto.setBirthday(DateUtil.formatDate(profile.getBirthday()));
         dto.setRegistrationDate(DateUtil.formatDate(profile.getRegistrationDate()));
+        log.info("usuario final: ",dto);
         return dto;
     }
 
@@ -156,7 +158,7 @@ public class UserServiceImpl extends BaseServiceImpl<UserDTO, UserDomain, UserRe
 
     //@Override
     @Transactional
-    @CachePut(value = "my_tube_users", key = "'user_' + #id")
+    @CachePut(value = "my_tube_users_complete", key = "'user_complete_'+#id")
     public UserDTOComplete updateUser(Integer id, UserDTOComplete dto) {
         // Buscar el usuario existente en la base de datos
         UserDomain userDomain = userDao.findByIdAndDeletedFalse(id)
@@ -183,7 +185,7 @@ public class UserServiceImpl extends BaseServiceImpl<UserDTO, UserDomain, UserRe
     }
 
     @Transactional(readOnly = true)
-    @Cacheable(value = "my_tube_users_complete", key = "'user_complete_'+#id", unless = "#result == null")
+    //@Cacheable(value = "my_tube_users_complete", key = "'user_complete_'+#id", unless = "#result == null")
     public UserDTOComplete getUserByIdComplete(Integer id) {
         // Primero buscamos el perfil utilizando el ID del usuario
         ProfileDomain profileDomain = profileDAO.findByUserId(id)
@@ -194,7 +196,8 @@ public class UserServiceImpl extends BaseServiceImpl<UserDTO, UserDomain, UserRe
                 .orElseThrow(() -> new ResourceNotFoundException("User no encontrado: " + id));
 
         // Convertimos ambos dominios en un UserDTOComplete
-        return convertDomainToDtoComplete(userDomain, profileDomain);
+        UserDTOComplete complete = convertDomainToDtoComplete(userDomain, profileDomain);
+        return complete;
     }
 
     @Transactional(readOnly = true)
