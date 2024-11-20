@@ -5,6 +5,7 @@ import com.fiuni.mytube.domain.subscription.SubscriptionDomain;
 import com.fiuni.mytube.domain.user.UserDomain;
 import com.fiuni.mytube.dto.subscription.SubscriptionDTO;
 import com.fiuni.mytube.dto.subscription.SubscriptionResult;
+import com.fiuni.mytube_users.dao.IChannelDao;
 import com.fiuni.mytube_users.dao.ISubscriptionDao;
 import com.fiuni.mytube_users.dao.IUserDao;
 import com.fiuni.mytube_users.util.exception.BadRequestException;
@@ -35,6 +36,8 @@ public class SubscriptionServiceImpl extends BaseServiceImpl<SubscriptionDTO, Su
     private ISubscriptionDao subscriptionDao;
     @Autowired
     private RedisCacheManager redisCacheManager;
+    @Autowired
+    private IChannelDao channelDao;
 
     @Override
     protected SubscriptionDTO convertDomainToDto(SubscriptionDomain domain) {
@@ -42,7 +45,7 @@ public class SubscriptionServiceImpl extends BaseServiceImpl<SubscriptionDTO, Su
         SubscriptionDTO dto = new SubscriptionDTO();
         dto.set_id(domain.getId());
         dto.setUserId(domain.getUser().getId());
-        dto.setChannelId(1);
+        dto.setChannelId(domain.getChannel().getId());
         dto.setSubscriptionDate(domain.getSubscriptionDate());
         return dto;
     }
@@ -56,10 +59,9 @@ public class SubscriptionServiceImpl extends BaseServiceImpl<SubscriptionDTO, Su
         UserDomain user = userDao.findById(dto.getUserId())
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Usuario no encontrado"));
 
-        // Hardcodear el canal
-        ChannelDomain channel = new ChannelDomain();
-        channel.setId(1); // ID del canal hardcodeado
-        channel.setChannelName("Canal predeterminado"); // Nombre del canal hardcodeado
+        ChannelDomain channel = channelDao.findById(dto.getChannelId())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Canal no encontrado"));
+
 
         // Asignar los valores a la suscripción
         domain.setUser(user);
