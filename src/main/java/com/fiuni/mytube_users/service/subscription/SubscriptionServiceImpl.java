@@ -140,4 +140,21 @@ public class SubscriptionServiceImpl extends BaseServiceImpl<SubscriptionDTO, Su
             throw new BadRequestException("Bad request to save subscription");
         }
     }
+
+    @Override
+    public List<SubscriptionDTO> getChannelSubscriptions(Integer channelId) {
+        List<SubscriptionDomain> subscriptions = subscriptionDao.findByChannel_Id(channelId);
+        // Convertir las suscripciones a DTOs
+        List<SubscriptionDTO> subscriptionDTOs = subscriptions.stream()
+                .map(this::convertDomainToDto)
+                .collect(Collectors.toList());
+
+        // Iterar sobre cada DTO y guardarlo en el caché
+        for (SubscriptionDTO dto : subscriptionDTOs) {
+            String cacheKey = "my_tube_subscriptions_user_" + dto.get_id(); // Crear la clave para cada suscripción
+            redisCacheManager.getCache("my_tube_subscriptions_user").put(cacheKey, dto);
+            log.info("Suscripción guardada en cache: {}", dto);
+        }
+        return subscriptionDTOs;
+    }
 }

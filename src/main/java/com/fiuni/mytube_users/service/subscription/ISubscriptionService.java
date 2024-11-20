@@ -12,4 +12,5 @@ public interface ISubscriptionService extends IBaseService<SubscriptionDTO, Subs
     void deleteSubscription(Integer id);
     SubscriptionResult getAll(Pageable pageable);
     SubscriptionDTO save(SubscriptionDTO subscriptionDTO);
+    List<SubscriptionDTO> getChannelSubscriptions(Integer channelId);
 }

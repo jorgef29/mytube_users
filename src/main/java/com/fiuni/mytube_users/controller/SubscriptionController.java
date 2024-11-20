@@ -52,4 +52,21 @@ public class SubscriptionController {
         log.info("Subscription with ID: {} successfully removed", id);
         return new ResponseEntity<>("Subscription successfully removed", HttpStatus.OK);
     }
+
+    @GetMapping("/channel/{id}")
+    public ResponseEntity<List<SubscriptionDTO>> getChannelSubscriptions(@PathVariable Integer id) {
+        try {
+            log.info("Fetching subscriptions for user ID: {}", id);
+            List<SubscriptionDTO> subscriptions = subscriptionService.getChannelSubscriptions(id);
+            if (subscriptions.isEmpty()) {
+                log.info("No subscriptions found for channel ID: {}", id);
+                return new ResponseEntity<>(HttpStatus.NO_CONTENT);
+            }
+            log.info("Successfully fetched subscriptions for channel ID: {}", id);
+            return new ResponseEntity<>(subscriptions, HttpStatus.OK);
+        } catch (Exception e) {
+            log.error("Error fetching subscriptions for channel ID: {}", id, e);
+            return new ResponseEntity<>(null, HttpStatus.NOT_FOUND);
+        }
+    }
 }

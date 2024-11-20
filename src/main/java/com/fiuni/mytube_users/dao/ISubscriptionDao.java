@@ -9,4 +9,5 @@ import java.util.List;
 
 public interface ISubscriptionDao extends JpaRepository<SubscriptionDomain, Integer> {
     List<SubscriptionDomain> findByUser_Id(Integer userId);
+    List<SubscriptionDomain> findByChannel_Id(Integer channelId);
 }
