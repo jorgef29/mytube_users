@@ -158,7 +158,7 @@ public class UserServiceImpl extends BaseServiceImpl<UserDTO, UserDomain, UserRe
 
     //@Override
     @Transactional
-    @CachePut(value = "my_tube_users_complete", key = "'user_complete_'+#id")
+    //@CachePut(value = "my_tube_users_complete", key = "'user_complete_'+#id")
     public UserDTOComplete updateUser(Integer id, UserDTOComplete dto) {
         // Buscar el usuario existente en la base de datos
         UserDomain userDomain = userDao.findByIdAndDeletedFalse(id)
