@@ -92,7 +92,7 @@ public class UserServiceImpl extends BaseServiceImpl<UserDTO, UserDomain, UserRe
         dto.setBio(profile.getBio() != null ? profile.getBio().toString() : "");
         dto.setBirthday(DateUtil.formatDate(profile.getBirthday()));
         dto.setRegistrationDate(DateUtil.formatDate(profile.getRegistrationDate()));
-        log.info("usuario final: ",dto);
+        log.info("usuario final: " + dto);
         return dto;
     }
 
@@ -176,7 +176,7 @@ public class UserServiceImpl extends BaseServiceImpl<UserDTO, UserDomain, UserRe
         profileDomain.setBio(dto.getBio());
         profileDomain.setAvatarUrl(dto.getAvatarUrl());
         profileDomain.setBirthday(DateUtil.parseToDate(dto.getBirthday()));
-        //profileDomain.setRegistrationDate(dto.getRegistrationDate());
+        log.info("bithdate al actualizar: "+dto.getBirthday());
         ProfileDomain updateProfileDomain= profileDAO.save(profileDomain);
 
         // Convertir el dominio actualizado a DTO y devolverlo
