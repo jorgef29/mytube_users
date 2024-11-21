@@ -178,7 +178,7 @@ public class UserServiceImpl extends BaseServiceImpl<UserDTO, UserDomain, UserRe
         profileDomain.setBirthday(DateUtil.parseToDate(dto.getBirthday()));
         log.info("bithdate al actualizar: "+dto.getBirthday());
         ProfileDomain updateProfileDomain= profileDAO.save(profileDomain);
-
+        log.info("perfil actualizado"+updateProfileDomain);
         // Convertir el dominio actualizado a DTO y devolverlo
         //return convertDomainToDto(updatedDomain);
         return convertDomainToDtoComplete(updatedDomain, updateProfileDomain);
